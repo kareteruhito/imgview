@@ -70,10 +70,10 @@
                 </i:EventTrigger>
             </i:Interaction.Triggers>
             <Canvas>
-                <Image
-                    Name="Image1"
-                    Stretch="Uniform"
-                    Source="{Binding PictureView.Value}">
+                <Image  Name="Image1"
+                        RenderOptions.BitmapScalingMode="NearestNeighbor"
+                        Stretch="Uniform"
+                        Source="{Binding PictureView.Value}">
                     <i:Interaction.Triggers>
                         <i:EventTrigger EventName="MouseDown">
                             <interactivity:EventToReactiveCommand Command="{Binding MouseDownCommand}" />
