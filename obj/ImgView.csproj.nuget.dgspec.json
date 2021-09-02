@@ -1,0 +1,73 @@
+{
+  "format": 1,
+  "restore": {
+    "H:\\csharp\\git\\ImgView\\ImgView.csproj": {}
+  },
+  "projects": {
+    "H:\\csharp\\git\\ImgView\\ImgView.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "H:\\csharp\\git\\ImgView\\ImgView.csproj",
+        "projectName": "ImgView",
+        "projectPath": "H:\\csharp\\git\\ImgView\\ImgView.csproj",
+        "packagesPath": "C:\\Users\\PC01114\\.nuget\\packages\\",
+        "outputPath": "H:\\csharp\\git\\ImgView\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\PC01114\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net5.0-windows"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net5.0-windows7.0": {
+            "targetAlias": "net5.0-windows",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net5.0-windows7.0": {
+          "targetAlias": "net5.0-windows",
+          "dependencies": {
+            "Microsoft.Xaml.Behaviors.Wpf": {
+              "target": "Package",
+              "version": "[1.1.31, )"
+            },
+            "ReactiveProperty.WPF": {
+              "target": "Package",
+              "version": "[7.12.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            },
+            "Microsoft.WindowsDesktop.App.WPF": {
+              "privateAssets": "none"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.104\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
