@@ -16,7 +16,7 @@ namespace ImgView
 {
     public class PicturesModel
     {
-        static readonly string[] _pictureExtensions = new string[] { ".PNG", ".JPEG", ".JPG", ".BMP"};
+        static readonly string[] _pictureExtensions = new string[] { ".PNG", ".JPEG", ".JPG", ".BMP", ".WEBP"};
 
         List<FileInfo> _files;
         int _index;
