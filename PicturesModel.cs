@@ -223,7 +223,7 @@ namespace ImgView
             Debug.Print("LoadAheadImage開始");
             
             var ext = Path.GetExtension(path).ToUpper();
-            if (ext == ".ZIP")
+            if (ext == ".ZIP" || ext == ".EPUB")
             {
                 // ZIPファイル
                 var Location = path;
@@ -462,9 +462,17 @@ namespace ImgView
                     }
 
                     _index2 = _index + 1;
+                    var ri2 = LoadImage(_files[_index2]);
+                    if (ri2.PixelWidth > ri2.PixelHeight)
+                    {
+                        _index2 = -1;
+                        // 横長
+                        return PlaceOnCanvasImage(ri);
+                    }
+
                     CurrentImageName = _files[_index2].FileName + "|" + _files[_index].FileName + " ";
 
-                    return PlaceOnCanvasImage(ri, LoadImage(_files[_index2]));
+                    return PlaceOnCanvasImage(ri, ri2);
                 }
             }
         }
