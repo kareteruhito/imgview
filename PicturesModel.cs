@@ -97,7 +97,7 @@ namespace ImgView
                     imagesIndex++;
                     continue;
                 }
-                if (ext == ".ZIP")
+                if (ext == ".ZIP" || ext == ".EPUB")
                 {
                     // ZIPファイル
                     var Location = file;
