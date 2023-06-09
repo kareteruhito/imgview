@@ -40,7 +40,7 @@ namespace ImgView
                     LocationType = "Dir",
                 });
             }
-            if (ext == ".ZIP")
+            if (ext == ".ZIP" || ext == ".EPUB")
             {
                 // ZIPファイル
                 var Location = file;
