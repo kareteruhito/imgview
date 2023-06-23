@@ -177,7 +177,7 @@ namespace ImgView
                         {
                             var sw = new Stopwatch();
                             sw.Start();
-
+                            
                             var b = await Task.Run(() => _pictureModel.CurrentImage);
                             PictureView.Value = b;
                             Titlebar.Value = _pictureModel.CurrentImageName;

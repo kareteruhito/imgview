@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using System.Drawing;
 using System.Runtime.ExceptionServices;
@@ -227,20 +229,32 @@ namespace ImgView
             {
                 // ZIPファイル
                 var Location = path;
+#if DEBUG
+                var fi = new System.IO.FileInfo(path);
+                Debug.Print($"{path} size:{fi.Length/(1024*1024)}MB");                
+                var sw = new Stopwatch();
+                sw.Start();
+#endif
                 using (var zip = System.IO.Compression.ZipFile.OpenRead(path))
                 {
                     var es = zip.Entries
                         .Where(x => _pictureExtensions.Contains(Path.GetExtension(x.FullName).ToUpper()));
                     
-                    foreach(var e in es)
+                    //foreach(var e in es)
+                    Parallel.ForEach(es, e =>
                     {
                         LoadCacheImage(new FileInfo{
                             FileName = e.FullName,
                             Location = Location,
                             LocationType = "Zip",
                         });
-                    }
+                    });
                 }
+#if DEBUG
+                sw.Stop();
+                Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec");
+#endif
+
             }
             if (_pictureExtensions.Contains(ext))
             {
@@ -337,12 +351,20 @@ namespace ImgView
 
             if (bi.Format != PixelFormats.Bgra32)
             {
+#if DEBUG
+                var sw = new Stopwatch();
+                sw.Start();
+#endif
                 bi = new FormatConvertedBitmap(
                     bi,
                     PixelFormats.Bgra32,
                     null,
                     0);
                 bi.Freeze();
+#if DEBUG
+                sw.Stop();
+                Debug.Print($"ConvertToBgra32:{sw.Elapsed.Milliseconds}msec");
+#endif
             }
 
             return ConvertToDPI96(bi);
@@ -352,6 +374,10 @@ namespace ImgView
             const double dpi = 96;
             if (bi.DpiX != dpi || bi.DpiY != dpi)
             {
+#if DEBUG
+                var sw = new Stopwatch();
+                sw.Start();
+#endif
                 int width = bi.PixelWidth;
                 int height = bi.PixelHeight;
                 int stride = width * 4;
@@ -368,6 +394,10 @@ namespace ImgView
                     pixelData,
                     stride);
                 bi.Freeze();
+#if DEBUG
+                sw.Stop();
+                Debug.Print($"ConvertToDPI96:{sw.Elapsed.Milliseconds}msec");
+#endif
             }
             return bi;
         }
@@ -376,7 +406,16 @@ namespace ImgView
             int stride = bi.PixelWidth * 4;
             byte[] datas = new byte[stride * bi.PixelHeight];
 
+#if DEBUG
+                var sw = new Stopwatch();
+                sw.Start();
+#endif
             bi.CopyPixels(new Int32Rect(0, 0, bi.PixelWidth, bi.PixelHeight), datas, stride, 0);
+#if DEBUG
+                sw.Stop();
+                Debug.Print($"CopyPixels:{sw.Elapsed.Milliseconds}msec");
+                sw.Start();
+#endif
 
             WriteableBitmap w;
 
@@ -434,6 +473,10 @@ namespace ImgView
             }
 
             w.Freeze();
+#if DEBUG
+                sw.Stop();
+                Debug.Print($"PlaceOnCanvasImage:{sw.Elapsed.Milliseconds}msec");
+#endif
             return w;
         }
 
