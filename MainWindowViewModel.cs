@@ -94,9 +94,10 @@ namespace ImgView
                     var fullname = PlaylistItems[PlaylistIndex.Value].FullName;
                     //if (Path.GetExtension(fullname).ToUpper() == ".ZIP")
                     //{
-                    var t = new Task(()=>PicturesModel.LoadAheadImage(fullname));
-                    t.Start();
+                    //var t = new Task(()=>PicturesModel.LoadAheadImage(fullname));
+                    //t.Start();
                     //}
+                    Task.Run(()=>PicturesModel.LoadAheadImage(fullname));
                     StartCommand.Execute();
                 });
 
