@@ -97,7 +97,7 @@ namespace ImgView
                     //var t = new Task(()=>PicturesModel.LoadAheadImage(fullname));
                     //t.Start();
                     //}
-                    Task.Run(()=>PicturesModel.LoadAheadImage(fullname));
+                    //Task.Run(()=>PicturesModel.LoadAheadImage(fullname));
                     StartCommand.Execute();
                 });
 
