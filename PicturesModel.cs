@@ -132,7 +132,7 @@ namespace ImgView
             }
         }
 
-        static readonly int BitmapSourceCacheMax = 1000;
+        // static readonly int BitmapSourceCacheMax = 1000;
         static public Dictionary<string, BitmapSource> BitmapSourceCacheDictionay = new();
 
         static public BitmapSource LoadCacheImage(FileInfo info)
@@ -146,83 +146,61 @@ namespace ImgView
 
             // キャッシュ無し
             BitmapImage bi = new BitmapImage();
+
             // ストリームを開く
             if (info.LocationType == "Zip")
             {
                 // ZIP
-                using (var zip = System.IO.Compression.ZipFile.OpenRead(info.Location))
-                {
-                    using(var fs = zip.GetEntry(info.FileName).Open())
-                    {
-                        using (var ms = new MemoryStream())
-                        {
+                using var zip = System.IO.Compression.ZipFile.OpenRead(info.Location);
+                using var fs = zip.GetEntry(info.FileName).Open();
+                using var ms = new MemoryStream();
+                fs.CopyTo(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+                
+                bi.BeginInit();
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.StreamSource = ms;
+                bi.EndInit();
+                bi.Freeze();
 
-
-                            fs.CopyTo(ms);
-                            ms.Seek(0, SeekOrigin.Begin);
-                            
-
-                            bi.BeginInit();
-                            bi.CacheOption = BitmapCacheOption.OnLoad;
-                            bi.StreamSource = ms;
-                            bi.EndInit();
-                            ms.SetLength(0);
-                        }                        
-                    }
-                }
+                ms.SetLength(0);
             }
             else
             {
                 // Direcotry
                 var path = Path.Join(info.Location, info.FileName);
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                {
-                    using (var ms = new MemoryStream())
-                    {
-                        fs.CopyTo(ms);
-                        ms.Seek(0, SeekOrigin.Begin);
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+                using var ms = new MemoryStream();
+                fs.CopyTo(ms);
+                ms.Seek(0, SeekOrigin.Begin);
 
-                        bi.BeginInit();
-                        bi.CacheOption = BitmapCacheOption.OnLoad;
-                        bi.StreamSource = ms;
-                        bi.EndInit();
-                        ms.SetLength(0);
-                    }
-                }
+                bi.BeginInit();
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.StreamSource = ms;
+                bi.EndInit();
+                bi.Freeze();
+
+                ms.SetLength(0);
             }
-            bi.Freeze();
 
             var bs = ConvertToBgra32(bi);
-
-            // キャッシュ数の最大値を超えている場合
-            if (BitmapSourceCacheDictionay.Count >= BitmapSourceCacheMax)
-            {
-                var removeCacheKey = BitmapSourceCacheDictionay.First().Key;
-                lock(BitmapSourceCacheDictionay)
-                {
-                    if (BitmapSourceCacheDictionay.ContainsKey(removeCacheKey))
-                    {
-                        BitmapSourceCacheDictionay.Remove(removeCacheKey);
-                    }
-                }
-            }
-
-            // キャッシュに追加
+            // ロック
             lock(BitmapSourceCacheDictionay)
             {
+                // キャッシュに追加
                 if (BitmapSourceCacheDictionay.ContainsKey(cacheKey) == false)
                 {
                     BitmapSourceCacheDictionay[cacheKey] = bs;
                 }
             }
-
             return BitmapSourceCacheDictionay[cacheKey];
         }
         
         // キャッシュに先読み
-        static public void LoadAheadImage(string path)
+        static public int LoadAheadImage(string path)
         {
             Debug.Print("LoadAheadImage開始");
+            int i = 0;
             
             var ext = Path.GetExtension(path).ToUpper();
             if (ext == ".ZIP" || ext == ".EPUB")
@@ -240,15 +218,15 @@ namespace ImgView
                     var es = zip.Entries
                         .Where(x => _pictureExtensions.Contains(Path.GetExtension(x.FullName).ToUpper()));
                     
-                    //foreach(var e in es)
-                    Parallel.ForEach(es, e =>
+                    foreach(var e in es)
                     {
-                        LoadCacheImage(new FileInfo{
+                        i = i + 1;
+                        var _ =  LoadCacheImage(new FileInfo{
                             FileName = e.FullName,
                             Location = Location,
                             LocationType = "Zip",
                         });
-                    });
+                    }
                 }
 #if DEBUG
                 sw.Stop();
@@ -258,7 +236,8 @@ namespace ImgView
             }
             if (_pictureExtensions.Contains(ext))
             {
-                LoadCacheImage(new FileInfo{
+                i = i + 1;
+                var _ = LoadCacheImage(new FileInfo{
                     FileName = Path.GetFileName(path),
                     Location = Path.GetDirectoryName(path),
                     LocationType = "Dir",
@@ -287,7 +266,7 @@ namespace ImgView
             }
             */
             Debug.Print("LoadAheadImage終了");
-            return;
+            return i;
         }
 
         static private BitmapSource LoadImage(FileInfo info)
@@ -481,42 +460,39 @@ namespace ImgView
         }
 
         public string CurrentImageName{ get; private set; } = "";
-        public BitmapSource CurrentImage
+        public BitmapSource CurrentImage()
         {
-            get
+            if (_index == -1) return null;
+
+            if (_index == 0 || _index == (_files.Count-1) || _files.Count == 1 || _files[_index].Location != _files[_index+1].Location || _files[_index].Location != _files[_index-1].Location)
             {
-                if (_index == -1) return null;
-
-                if (_index == 0 || _index == (_files.Count-1) || _files.Count == 1 || _files[_index].Location != _files[_index+1].Location || _files[_index].Location != _files[_index-1].Location)
+                CurrentImageName = _files[_index].FileName + " ";
+                _index2 = -1;
+                var bi = LoadImage(_files[_index]);
+                return PlaceOnCanvasImage(bi);
+            }
+            else
+            {
+                var ri = LoadImage(_files[_index]);
+                if (ri.PixelWidth > ri.PixelHeight)
                 {
-                    CurrentImageName = _files[_index].FileName + " ";
                     _index2 = -1;
-
-                    return PlaceOnCanvasImage(LoadImage(_files[_index]));
+                    // 横長
+                    return PlaceOnCanvasImage(ri);
                 }
-                else
+
+                _index2 = _index + 1;
+                var ri2 = LoadImage(_files[_index2]);
+                if (ri2.PixelWidth > ri2.PixelHeight)
                 {
-                    var ri = LoadImage(_files[_index]);
-                    if (ri.PixelWidth > ri.PixelHeight)
-                    {
-                        _index2 = -1;
-                        // 横長
-                        return PlaceOnCanvasImage(ri);
-                    }
-
-                    _index2 = _index + 1;
-                    var ri2 = LoadImage(_files[_index2]);
-                    if (ri2.PixelWidth > ri2.PixelHeight)
-                    {
-                        _index2 = -1;
-                        // 横長
-                        return PlaceOnCanvasImage(ri);
-                    }
-
-                    CurrentImageName = _files[_index2].FileName + "|" + _files[_index].FileName + " ";
-
-                    return PlaceOnCanvasImage(ri, ri2);
+                    _index2 = -1;
+                    // 横長
+                    return PlaceOnCanvasImage(ri);
                 }
+
+                CurrentImageName = _files[_index2].FileName + "|" + _files[_index].FileName + " ";
+
+                return PlaceOnCanvasImage(ri, ri2);
             }
         }
         public bool MoveNext()

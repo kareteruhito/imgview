@@ -33,7 +33,7 @@ namespace ImgView
         public ReactiveCollection<PlaylistItem> PlaylistItems { get; set; } = new ();
 
         public ReactiveCommand<DragEventArgs> DropCommand { get; }
-        public AsyncReactiveCommand<MouseButtonEventArgs> MouseDownCommand { get; }
+        public ReactiveCommand<MouseButtonEventArgs> MouseDownCommand { get; }
         public ReactiveProperty<BitmapSource> PictureView { get; private set; }
 
         public ReactiveCommand FullScreenCommand { get; }
@@ -97,7 +97,7 @@ namespace ImgView
                     //var t = new Task(()=>PicturesModel.LoadAheadImage(fullname));
                     //t.Start();
                     //}
-                    //Task.Run(()=>PicturesModel.LoadAheadImage(fullname));
+                    //var i = PicturesModel.LoadAheadImage(fullname);
                     StartCommand.Execute();
                 });
 
@@ -157,9 +157,9 @@ namespace ImgView
                     })
                 .AddTo(Disposable);
             
-            MouseDownCommand = new AsyncReactiveCommand<MouseButtonEventArgs>()
+            MouseDownCommand = new ReactiveCommand<MouseButtonEventArgs>()
                 .WithSubscribe<MouseButtonEventArgs>(
-                    async e =>{
+                    e =>{
                         if (_pictureModel == null) return;
 
                         bool isMove = false;
@@ -179,7 +179,7 @@ namespace ImgView
                             var sw = new Stopwatch();
                             sw.Start();
                             
-                            var b = await Task.Run(() => _pictureModel.CurrentImage);
+                            var b = _pictureModel.CurrentImage();
                             PictureView.Value = b;
                             Titlebar.Value = _pictureModel.CurrentImageName;
 
@@ -211,7 +211,7 @@ namespace ImgView
 
             StartCommand = new ReactiveCommand()
                 .WithSubscribe (
-                    () => {
+                    async () => {
                         if (PlaylistItems.Any() == false) return;
                         PlaylistVisibility.Value = Visibility.Collapsed;
 
@@ -225,7 +225,7 @@ namespace ImgView
                         var sw = new Stopwatch();
                         sw.Start();
 
-                        var b = _pictureModel.CurrentImage;
+                        var b = _pictureModel.CurrentImage();
                         PictureView.Value = b;
                         Titlebar.Value = _pictureModel.CurrentImageName;
 
