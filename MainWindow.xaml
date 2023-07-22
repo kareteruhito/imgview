@@ -39,7 +39,7 @@
                 Orientation="Horizontal"
                 Margin="10">
                 <Button Content="開始"
-                        Command="{Binding StartCommand}" />
+                        Command="{Binding StartCommandAsync}" />
                 <Button Content="削除"
                         Command="{Binding RemoveCommand}" />
                 <Button Content="クリア"
@@ -76,7 +76,7 @@
                         Source="{Binding PictureView.Value}">
                     <i:Interaction.Triggers>
                         <i:EventTrigger EventName="MouseDown">
-                            <interactivity:EventToReactiveCommand Command="{Binding MouseDownCommand}" />
+                            <interactivity:EventToReactiveCommand Command="{Binding MouseDownCommandAsync}" />
                         </i:EventTrigger>
                     </i:Interaction.Triggers>
                 </Image>

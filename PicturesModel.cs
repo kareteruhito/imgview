@@ -150,12 +150,17 @@ namespace ImgView
             // ストリームを開く
             if (info.LocationType == "Zip")
             {
+var sw = new Stopwatch();
+sw.Start();
                 // ZIP
                 using var zip = System.IO.Compression.ZipFile.OpenRead(info.Location);
                 using var fs = zip.GetEntry(info.FileName).Open();
                 using var ms = new MemoryStream();
                 fs.CopyTo(ms);
                 ms.Seek(0, SeekOrigin.Begin);
+sw.Stop();
+Debug.Print($"LoadCacheImage().fsCopyTo():{sw.ElapsedMilliseconds}msec");
+sw.Restart();
                 
                 bi.BeginInit();
                 bi.CacheOption = BitmapCacheOption.OnLoad;
@@ -164,6 +169,8 @@ namespace ImgView
                 bi.Freeze();
 
                 ms.SetLength(0);
+sw.Stop();
+Debug.Print($"LoadCacheImage().bi-begin-end:{sw.ElapsedMilliseconds}msec");
             }
             else
             {
@@ -195,10 +202,96 @@ namespace ImgView
             }
             return BitmapSourceCacheDictionay[cacheKey];
         }
-        
+
+        async static public Task<BitmapSource> LoadCacheImageAsync(FileInfo info)
+        {
+            // キャッシュにあるか
+            var cacheKey = Path.Combine(info.Location, info.FileName);
+            if (BitmapSourceCacheDictionay.ContainsKey(cacheKey))
+            {
+                return BitmapSourceCacheDictionay[cacheKey];
+            }
+
+            // キャッシュ無し
+            BitmapImage bi = new BitmapImage();
+
+            // ストリームを開く
+            if (info.LocationType == "Zip")
+            {
+var sw = new Stopwatch();
+sw.Start();
+                // ZIP
+                using var zip = System.IO.Compression.ZipFile.OpenRead(info.Location);
+                using var fs = zip.GetEntry(info.FileName).Open();
+                using var ms = new MemoryStream();
+                await fs.CopyToAsync(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+sw.Stop();
+Debug.Print($"LoadCacheImageAsync().fs.CopyToAsync():{sw.ElapsedMilliseconds}msec");
+sw.Restart();
+                bi = await Task.Run(()=>
+                {
+                    var b = new BitmapImage();
+                    b.BeginInit();
+                    b.CacheOption = BitmapCacheOption.OnLoad;
+                    b.StreamSource = ms;
+                    b.EndInit();
+                    b.Freeze();
+                    return b;
+                });
+                ms.SetLength(0);
+sw.Stop();
+Debug.Print($"LoadCacheImageAsync().bi-begin-end:{sw.ElapsedMilliseconds}msec");
+            }
+            else
+            {
+                // Direcotry
+                var path = Path.Join(info.Location, info.FileName);
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+                using var ms = new MemoryStream();
+                fs.CopyTo(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                bi.BeginInit();
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.StreamSource = ms;
+                bi.EndInit();
+                bi.Freeze();
+
+                ms.SetLength(0);
+            }
+
+            var bs = ConvertToBgra32(bi);
+            // ロック
+            lock(BitmapSourceCacheDictionay)
+            {
+                // キャッシュに追加
+                if (BitmapSourceCacheDictionay.ContainsKey(cacheKey) == false)
+                {
+                    BitmapSourceCacheDictionay[cacheKey] = bs;
+                }
+            }
+            return BitmapSourceCacheDictionay[cacheKey];
+        }
+
         // キャッシュに先読み
         static public int LoadAheadImage(string path)
         {
+            int i = 0;
+            var ext = Path.GetExtension(path).ToUpper();
+            if (ext != ".ZIP" && ext != ".EPUB") return i;
+Debug.Print("LoadAheadImage開始");
+var sw = new Stopwatch();
+sw.Start();
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+            using var ms = new MemoryStream();
+            fs.CopyTo(ms);
+            i = (int)ms.Length;
+            ms.SetLength(0);
+sw.Stop();
+Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileName(path)} {i}Byte");
+            return i;    
+            /*
             Debug.Print("LoadAheadImage開始");
             int i = 0;
             
@@ -234,6 +327,8 @@ namespace ImgView
 #endif
 
             }
+            */
+            /*
             if (_pictureExtensions.Contains(ext))
             {
                 i = i + 1;
@@ -243,6 +338,7 @@ namespace ImgView
                     LocationType = "Dir",
                 });
             }
+            */
             /*
 
             var dir = path;
@@ -265,8 +361,10 @@ namespace ImgView
                 });
             }
             */
+            /*
             Debug.Print("LoadAheadImage終了");
             return i;
+            */
         }
 
         static private BitmapSource LoadImage(FileInfo info)
@@ -325,7 +423,11 @@ namespace ImgView
             return ConvertToBgra32(bi);
             */
         }
-        static private BitmapSource ConvertToBgra32(BitmapSource bi)
+        async static private Task<BitmapSource> LoadImageAsync(FileInfo info)
+        {
+            return await LoadCacheImageAsync(info);
+        }
+       static private BitmapSource ConvertToBgra32(BitmapSource bi)
         {
 
             if (bi.Format != PixelFormats.Bgra32)
@@ -483,6 +585,41 @@ namespace ImgView
 
                 _index2 = _index + 1;
                 var ri2 = LoadImage(_files[_index2]);
+                if (ri2.PixelWidth > ri2.PixelHeight)
+                {
+                    _index2 = -1;
+                    // 横長
+                    return PlaceOnCanvasImage(ri);
+                }
+
+                CurrentImageName = _files[_index2].FileName + "|" + _files[_index].FileName + " ";
+
+                return PlaceOnCanvasImage(ri, ri2);
+            }
+        }
+        async public Task<BitmapSource> CurrentImageAsync()
+        {
+            if (_index == -1) return null;
+
+            if (_index == 0 || _index == (_files.Count-1) || _files.Count == 1 || _files[_index].Location != _files[_index+1].Location || _files[_index].Location != _files[_index-1].Location)
+            {
+                CurrentImageName = _files[_index].FileName + " ";
+                _index2 = -1;
+                var bi = await LoadImageAsync(_files[_index]);
+                return PlaceOnCanvasImage(bi);
+            }
+            else
+            {
+                var ri = await LoadImageAsync(_files[_index]);
+                if (ri.PixelWidth > ri.PixelHeight)
+                {
+                    _index2 = -1;
+                    // 横長
+                    return PlaceOnCanvasImage(ri);
+                }
+
+                _index2 = _index + 1;
+                var ri2 = await LoadImageAsync(_files[_index2]);
                 if (ri2.PixelWidth > ri2.PixelHeight)
                 {
                     _index2 = -1;

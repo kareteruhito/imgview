@@ -34,6 +34,7 @@ namespace ImgView
 
         public ReactiveCommand<DragEventArgs> DropCommand { get; }
         public ReactiveCommand<MouseButtonEventArgs> MouseDownCommand { get; }
+        public AsyncReactiveCommand<MouseButtonEventArgs> MouseDownCommandAsync { get; }
         public ReactiveProperty<BitmapSource> PictureView { get; private set; }
 
         public ReactiveCommand FullScreenCommand { get; }
@@ -45,6 +46,7 @@ namespace ImgView
         public ReactiveCommand LoadCommand { get; }
 
         public ReactiveCommand StartCommand {get;}
+        public AsyncReactiveCommand StartCommandAsync {get;}
         public ReactiveCommand RemoveCommand { get; }
         public ReactiveCommand ClearCommand { get; }
         public ReactiveCommand UpCommand { get; }
@@ -91,14 +93,15 @@ namespace ImgView
                 .Subscribe(e=>{
                     if (PlaylistItems.Any() == false) return;
                     PlaylistIndex.Value = PlaylistItems.Count - 1;
+                    /*
                     var fullname = PlaylistItems[PlaylistIndex.Value].FullName;
-                    //if (Path.GetExtension(fullname).ToUpper() == ".ZIP")
-                    //{
-                    //var t = new Task(()=>PicturesModel.LoadAheadImage(fullname));
-                    //t.Start();
-                    //}
+                    if (Path.GetExtension(fullname).ToUpper() == ".ZIP")
+                    {
+                        Task.Run(()=>PicturesModel.LoadAheadImage(fullname));
+                    }
+                    */
                     //var i = PicturesModel.LoadAheadImage(fullname);
-                    StartCommand.Execute();
+                    StartCommandAsync.Execute();
                 });
 
             WinStyle = new ReactiveProperty<WindowStyle>(WindowStyle.SingleBorderWindow)
@@ -190,6 +193,40 @@ namespace ImgView
                         }
                     })
                 .AddTo(Disposable);
+            
+            MouseDownCommandAsync = new AsyncReactiveCommand<MouseButtonEventArgs>()
+                .WithSubscribe<MouseButtonEventArgs>(
+                    async e =>{
+                        if (_pictureModel == null) return;
+
+                        bool isMove = false;
+                        if (e.ChangedButton == MouseButton.Left)
+                        {
+                            //Debug.Print("次へ");
+                            isMove = _pictureModel.MoveNext();
+                        }
+                        if (e.ChangedButton == MouseButton.Right)
+                        {
+                            //Debug.Print("前へ");
+                            isMove = _pictureModel.MovePrevious();
+                        }
+
+                        if (isMove)
+                        {
+                            var sw = new Stopwatch();
+                            sw.Start();
+                            
+                            var b = await _pictureModel.CurrentImageAsync();
+                            PictureView.Value = b;
+                            Titlebar.Value = _pictureModel.CurrentImageName;
+
+                            sw.Stop();
+                            Titlebar.Value = string.Format("{0}ロード時間:{1}msec",
+                                _pictureModel.CurrentImageName,
+                                sw.Elapsed.Milliseconds);
+                        }
+                    })
+                .AddTo(Disposable);
 
             FullScreenCommand = new ReactiveCommand()
                 .WithSubscribe (
@@ -211,7 +248,7 @@ namespace ImgView
 
             StartCommand = new ReactiveCommand()
                 .WithSubscribe (
-                    async () => {
+                    () => {
                         if (PlaylistItems.Any() == false) return;
                         PlaylistVisibility.Value = Visibility.Collapsed;
 
@@ -227,9 +264,37 @@ namespace ImgView
 
                         var b = _pictureModel.CurrentImage();
                         PictureView.Value = b;
-                        Titlebar.Value = _pictureModel.CurrentImageName;
-
                         sw.Stop();
+                        //Titlebar.Value = _pictureModel.CurrentImageName;
+
+                        Titlebar.Value = string.Format("{0}ロード時間:{1}msec",
+                            _pictureModel.CurrentImageName,
+                            sw.Elapsed.Milliseconds);
+                    }
+                )
+                .AddTo(Disposable);
+            
+            StartCommandAsync = new AsyncReactiveCommand()
+                .WithSubscribe (
+                    async () => {
+                        if (PlaylistItems.Any() == false) return;
+                        PlaylistVisibility.Value = Visibility.Collapsed;
+
+                        List<string> files = new List<string>();
+                        foreach(var e in PlaylistItems)
+                        {
+                            files.Add(e.FullName);
+                        }
+                        _pictureModel = new PicturesModel(files.ToArray(), PlaylistIndex.Value);
+
+                        var sw = new Stopwatch();
+                        sw.Start();
+
+                        var b = await _pictureModel.CurrentImageAsync();
+                        PictureView.Value = b;
+                        sw.Stop();
+                        //Titlebar.Value = _pictureModel.CurrentImageName;
+
                         Titlebar.Value = string.Format("{0}ロード時間:{1}msec",
                             _pictureModel.CurrentImageName,
                             sw.Elapsed.Milliseconds);
@@ -335,7 +400,7 @@ namespace ImgView
                         else
                         {
                             // 閲覧モード
-                            StartCommand.Execute();
+                            StartCommandAsync.Execute();
                         }
                     }
                 )
