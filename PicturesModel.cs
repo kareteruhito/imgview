@@ -491,10 +491,7 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
                 return bii;
 #endif
             }
-            else
-            {
-                return bi;
-            }
+            return bi;
         }
         static private BitmapSource PlaceOnCanvasImage(BitmapSource bi, BitmapSource bi2=null)
         {
