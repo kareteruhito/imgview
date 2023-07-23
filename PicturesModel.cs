@@ -207,14 +207,14 @@ Debug.Print($"LoadCacheImage().bi-begin-end:{sw.ElapsedMilliseconds}msec");
         {
             // キャッシュにあるか
             var cacheKey = Path.Combine(info.Location, info.FileName);
-            var cbi = await ImageCacheFile.ImageCacheGetAsync(cacheKey);
-            if (cbi is not null) return cbi;
-            /*
+            //var cbi = await ImageCacheFile.ImageCacheGetAsync(cacheKey);
+            //if (cbi is not null) return cbi;
+            
             if (BitmapSourceCacheDictionay.ContainsKey(cacheKey))
             {
                 return BitmapSourceCacheDictionay[cacheKey];
             }
-            */
+            
 
             // キャッシュ無し
             var bi = new BitmapImage();
@@ -265,9 +265,10 @@ Debug.Print($"LoadCacheImageAsync().bi-begin-end:{sw.ElapsedMilliseconds}msec");
                 ms.SetLength(0);
             }
 
-            var bs = ConvertToBgra32(bi);
+            //var bs = ConvertToBgra32(bi);
+            var bs = await ConvertToBgra32Async(bi);
 
-            /*
+            
             // ロック
             lock(BitmapSourceCacheDictionay)
             {
@@ -278,10 +279,10 @@ Debug.Print($"LoadCacheImageAsync().bi-begin-end:{sw.ElapsedMilliseconds}msec");
                 }
             }
             return BitmapSourceCacheDictionay[cacheKey];
-            */
-            _ = ImageCacheFile.ImageCacheSetAsync(cacheKey, bs);
+            
+            //_ = ImageCacheFile.ImageCacheSetAsync(cacheKey, bs);
 
-            return bs;
+            //return bs;
         }
 
         // キャッシュに先読み
@@ -460,6 +461,34 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
 
             return ConvertToDPI96(bi);
         }
+       async static private Task<BitmapSource> ConvertToBgra32Async(BitmapSource bi)
+        {
+
+            if (bi.Format == PixelFormats.Bgra32)
+            {
+                return await ConvertToDPI96Async(bi);
+            }
+#if DEBUG
+var sw = new Stopwatch();
+sw.Start();
+#endif
+            var bi3 = await Task.Run(()=>
+            {
+                var bi2 = new FormatConvertedBitmap(
+                    bi,
+                    PixelFormats.Bgra32,
+                    null,
+                    0);
+                bi2.Freeze();
+                return bi2;
+            });
+#if DEBUG
+sw.Stop();
+Debug.Print($"ConvertToBgra32Async:{sw.Elapsed.Milliseconds}msec");
+#endif
+
+            return await ConvertToDPI96Async(bi3);
+        }
         static private BitmapSource ConvertToDPI96(BitmapSource bi)
         {
             const double dpi = 96;
@@ -492,6 +521,41 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
 #endif
             }
             return bi;
+        }
+        async static private Task<BitmapSource> ConvertToDPI96Async(BitmapSource bi)
+        {
+            double dpi = 96;
+            if (bi.DpiX == dpi && bi.DpiY == dpi) return bi;
+#if DEBUG
+var sw = new Stopwatch();
+sw.Start();
+#endif
+            var bi3 = await Task.Run(()=>
+            {
+                int width = bi.PixelWidth;
+                int height = bi.PixelHeight;
+                int stride = width * 4;
+                byte[] pixelData = new byte[stride * height];
+                bi.CopyPixels(pixelData, stride, 0);
+
+                var bi2 = BitmapImage.Create(
+                    width,
+                    height,
+                    dpi,
+                    dpi,
+                    PixelFormats.Bgra32,
+                    null,
+                    pixelData,
+                    stride);
+                bi2.Freeze();
+
+                return bi2;
+            });
+#if DEBUG
+sw.Stop();
+Debug.Print($"ConvertToDPI96Async:{sw.Elapsed.Milliseconds}msec");
+#endif
+            return bi3;
         }
         static private BitmapSource PlaceOnCanvasImage(BitmapSource bi, BitmapSource bi2=null)
         {
@@ -572,6 +636,92 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
             return w;
         }
 
+        async static private Task<BitmapSource> PlaceOnCanvasImageAsync(BitmapSource bi, BitmapSource bi2=null)
+        {
+            int stride = bi.PixelWidth * 4;
+            byte[] datas = new byte[stride * bi.PixelHeight];
+
+#if DEBUG
+var sw = new Stopwatch();
+sw.Start();
+#endif
+            await Task.Run(()=>
+            {
+                bi.CopyPixels(new Int32Rect(0, 0, bi.PixelWidth, bi.PixelHeight), datas, stride, 0);
+            });
+#if DEBUG
+sw.Stop();
+Debug.Print($"CopyPixelsAsync:{sw.Elapsed.Milliseconds}msec");
+sw.Restart();
+#endif
+
+            var w2 = await Task.Run(()=>
+            {
+                WriteableBitmap w;
+
+                if (bi2==null)
+                {
+                    // 画像１枚
+                    int width = (int)((bi.PixelHeight / 9.0) * 16.0);
+                    if (width < bi.PixelWidth) width = bi.PixelWidth;
+
+                    w  = new WriteableBitmap(width, bi.PixelHeight, bi.DpiX, bi.DpiY, PixelFormats.Bgra32, null);
+                    int x = (int)((width - bi.PixelWidth)/2);
+                    if (x < 0)
+                    {
+                        x = 0;
+                    }
+                    w.WritePixels(
+                        new Int32Rect(x, 0, bi.PixelWidth, bi.PixelHeight),
+                        datas,
+                        stride,
+                        0);
+                }
+                else
+                {
+                    // 画像２枚
+                    int stride2 = bi2.PixelWidth * 4;
+                    byte[] datas2 = new byte[stride2 * bi2.PixelHeight];
+
+                    int height = (bi2.PixelHeight>bi.PixelHeight) ? bi2.PixelHeight : bi.PixelHeight;
+                    //int width = (int)((height / 9.0) * 16.0);
+                    int width = bi2.PixelWidth + bi.PixelWidth;
+                    //if (width < (bi.PixelWidth+bi2.PixelWidth)) width = bi.PixelWidth+bi2.PixelWidth;
+
+                    w  = new WriteableBitmap(width, height, bi.DpiX, bi.DpiY, PixelFormats.Bgra32, null);
+
+                    bi2.CopyPixels(new Int32Rect(0, 0, bi2.PixelWidth, bi2.PixelHeight), datas2, stride2, 0);
+
+                    /*
+                    int x = (int)((width - (bi.PixelWidth+bi2.PixelWidth))/2);
+                    if (x < 0)
+                    {
+                        x = 0;
+                    }
+                    */
+                    int x = 0;
+                    w.WritePixels(
+                        new Int32Rect(x, 0, bi2.PixelWidth, bi2.PixelHeight),
+                        datas2,
+                        stride2,
+                        0);
+                    w.WritePixels(
+                        new Int32Rect(x+bi2.PixelWidth, 0, bi.PixelWidth, bi.PixelHeight),
+                        datas,
+                        stride,
+                        0);
+                }
+
+                w.Freeze();
+                return w;
+            });
+#if DEBUG
+sw.Stop();
+Debug.Print($"PlaceOnCanvasImageAsync:{sw.Elapsed.Milliseconds}msec");
+#endif
+            return w2;
+        }
+
         public string CurrentImageName{ get; private set; } = "";
         public BitmapSource CurrentImage()
         {
@@ -617,7 +767,7 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
                 CurrentImageName = _files[_index].FileName + " ";
                 _index2 = -1;
                 var bi = await LoadImageAsync(_files[_index]);
-                return PlaceOnCanvasImage(bi);
+                return await PlaceOnCanvasImageAsync(bi);
             }
             else
             {
@@ -626,7 +776,7 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
                 {
                     _index2 = -1;
                     // 横長
-                    return PlaceOnCanvasImage(ri);
+                    return await PlaceOnCanvasImageAsync(ri);
                 }
 
                 _index2 = _index + 1;
@@ -635,12 +785,12 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
                 {
                     _index2 = -1;
                     // 横長
-                    return PlaceOnCanvasImage(ri);
+                    return await PlaceOnCanvasImageAsync(ri);
                 }
 
                 CurrentImageName = _files[_index2].FileName + "|" + _files[_index].FileName + " ";
 
-                return PlaceOnCanvasImage(ri, ri2);
+                return await PlaceOnCanvasImageAsync(ri, ri2);
             }
         }
         public bool MoveNext()

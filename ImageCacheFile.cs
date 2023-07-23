@@ -39,7 +39,7 @@ public class ImageCacheFile
         string cacheImagePath = System.IO.Path.Combine(cacheDir, $"{hashString}.tiff");
         return cacheImagePath;
     }
-    async public static Task<BitmapImage?> ImageCacheGetAsync(string key)
+    async public static Task<BitmapImage> ImageCacheGetAsync(string key)
     {
         string cacheImagePath = CreateCacheFilePath(key);
 
