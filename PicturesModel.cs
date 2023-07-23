@@ -207,13 +207,17 @@ Debug.Print($"LoadCacheImage().bi-begin-end:{sw.ElapsedMilliseconds}msec");
         {
             // キャッシュにあるか
             var cacheKey = Path.Combine(info.Location, info.FileName);
+            var cbi = await ImageCacheFile.ImageCacheGetAsync(cacheKey);
+            if (cbi is not null) return cbi;
+            /*
             if (BitmapSourceCacheDictionay.ContainsKey(cacheKey))
             {
                 return BitmapSourceCacheDictionay[cacheKey];
             }
+            */
 
             // キャッシュ無し
-            BitmapImage bi = new BitmapImage();
+            var bi = new BitmapImage();
 
             // ストリームを開く
             if (info.LocationType == "Zip")
@@ -262,6 +266,8 @@ Debug.Print($"LoadCacheImageAsync().bi-begin-end:{sw.ElapsedMilliseconds}msec");
             }
 
             var bs = ConvertToBgra32(bi);
+
+            /*
             // ロック
             lock(BitmapSourceCacheDictionay)
             {
@@ -272,6 +278,10 @@ Debug.Print($"LoadCacheImageAsync().bi-begin-end:{sw.ElapsedMilliseconds}msec");
                 }
             }
             return BitmapSourceCacheDictionay[cacheKey];
+            */
+            _ = ImageCacheFile.ImageCacheSetAsync(cacheKey, bs);
+
+            return bs;
         }
 
         // キャッシュに先読み
@@ -465,7 +475,7 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
                 byte[] pixelData = new byte[stride * height];
                 bi.CopyPixels(pixelData, stride, 0);
 
-                bi = BitmapSource.Create(
+                var bii = BitmapImage.Create(
                     width,
                     height,
                     dpi,
@@ -474,13 +484,17 @@ Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileNa
                     null,
                     pixelData,
                     stride);
-                bi.Freeze();
+                bii.Freeze();
 #if DEBUG
                 sw.Stop();
                 Debug.Print($"ConvertToDPI96:{sw.Elapsed.Milliseconds}msec");
+                return bii;
 #endif
             }
-            return bi;
+            else
+            {
+                return bi;
+            }
         }
         static private BitmapSource PlaceOnCanvasImage(BitmapSource bi, BitmapSource bi2=null)
         {
