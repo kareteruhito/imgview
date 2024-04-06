@@ -79,7 +79,7 @@ namespace ImgView
 
                     //Debug.Print("Index:{0} Name:{1}", PlaylistIndex.Value, PlaylistItems[PlaylistIndex.Value].FullName);
                     var fullname = PlaylistItems[PlaylistIndex.Value].FullName;
-                    PictureView.Value = await Task.Run(() => PicturesModel.GetCoverPage(fullname));                    
+                    PictureView.Value = await Task.Run(() => ImageCacheManager.GetCoverPage(fullname));                    
                 }
             );
 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 
@@ -167,7 +168,6 @@ static public class ImageCacheManager
     {
         return await LoadCacheImageAsync(info);
     }
-/*
     static readonly string[] _pictureExtensions = new string[] { ".PNG", ".JPEG", ".JPG", ".BMP", ".WEBP"};
     /// <summary>
     /// 表紙画像の取得
@@ -210,5 +210,4 @@ static public class ImageCacheManager
         }
         return null;
     }
-*/
 }//class
