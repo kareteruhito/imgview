@@ -1,3 +1,4 @@
+/*
 using System.Security.Cryptography;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -46,7 +47,6 @@ public class ImageCacheFile
         if (!File.Exists(cacheImagePath)) return null;
 
         var stream = new FileStream(cacheImagePath, FileMode.Open, FileAccess.Read);
-Debug.Print($"{cacheImagePath}");
         var bi = await CreateBitmapImageAsync(stream);
 
         return bi;
@@ -79,3 +79,4 @@ Debug.Print($"{cacheImagePath}");
         }
     }    
 }//class
+*/
