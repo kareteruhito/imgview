@@ -284,7 +284,7 @@ Debug.Print($"LoadCacheImageAsync().bi-begin-end:{sw.ElapsedMilliseconds}msec");
 
             //return bs;
         }
-
+/*
         // キャッシュに先読み
         static public int LoadAheadImage(string path)
         {
@@ -302,137 +302,11 @@ sw.Start();
 sw.Stop();
 Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec {Path.GetFileName(path)} {i}Byte");
             return i;    
-            /*
-            Debug.Print("LoadAheadImage開始");
-            int i = 0;
-            
-            var ext = Path.GetExtension(path).ToUpper();
-            if (ext == ".ZIP" || ext == ".EPUB")
-            {
-                // ZIPファイル
-                var Location = path;
-#if DEBUG
-                var fi = new System.IO.FileInfo(path);
-                Debug.Print($"{path} size:{fi.Length/(1024*1024)}MB");                
-                var sw = new Stopwatch();
-                sw.Start();
-#endif
-                using (var zip = System.IO.Compression.ZipFile.OpenRead(path))
-                {
-                    var es = zip.Entries
-                        .Where(x => _pictureExtensions.Contains(Path.GetExtension(x.FullName).ToUpper()));
-                    
-                    foreach(var e in es)
-                    {
-                        i = i + 1;
-                        var _ =  LoadCacheImage(new FileInfo{
-                            FileName = e.FullName,
-                            Location = Location,
-                            LocationType = "Zip",
-                        });
-                    }
-                }
-#if DEBUG
-                sw.Stop();
-                Debug.Print($"Aheadロード時間:{sw.Elapsed.Milliseconds}msec");
-#endif
-
-            }
-            */
-            /*
-            if (_pictureExtensions.Contains(ext))
-            {
-                i = i + 1;
-                var _ = LoadCacheImage(new FileInfo{
-                    FileName = Path.GetFileName(path),
-                    Location = Path.GetDirectoryName(path),
-                    LocationType = "Dir",
-                });
-            }
-            */
-            /*
-
-            var dir = path;
-            if (_pictureExtensions.Contains(ext) == true)
-            {
-                // 画像ファイル
-                dir = Path.GetDirectoryName(path);
-            }
-
-            if (Directory.Exists(dir) == false) return;
-
-            var ess = Directory.EnumerateFiles(dir, "*", SearchOption.TopDirectoryOnly)
-                .Where(x => _pictureExtensions.Contains(Path.GetExtension(x).ToUpper()));
-            foreach(var e in ess)
-            {
-                LoadCacheImage(new FileInfo{
-                    FileName = Path.GetFileName(e),
-                    Location = dir,
-                    LocationType = "Dir",
-                });
-            }
-            */
-            /*
-            Debug.Print("LoadAheadImage終了");
-            return i;
-            */
         }
-
+*/
         static private BitmapSource LoadImage(FileInfo info)
         {
             return LoadCacheImage(info);
-
-            /*
-            var bi = new BitmapImage();
-
-            // ストリームを開く
-            if (info.LocationType == "Zip")
-            {
-                // ZIP
-                using (var zip = System.IO.Compression.ZipFile.OpenRead(info.Location))
-                {
-                    using(var fs = zip.GetEntry(info.FileName).Open())
-                    {
-                        using (var ms = new MemoryStream())
-                        {
-
-
-                            fs.CopyTo(ms);
-                            ms.Seek(0, SeekOrigin.Begin);
-                            
-
-                            bi.BeginInit();
-                            bi.CacheOption = BitmapCacheOption.OnLoad;
-                            bi.StreamSource = ms;
-                            bi.EndInit();
-                            ms.SetLength(0);
-                        }                        
-                    }
-                }
-            }
-            else
-            {
-                // Direcotry
-                var path = Path.Join(info.Location, info.FileName);
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read))
-                {
-                    using (var ms = new MemoryStream())
-                    {
-                        fs.CopyTo(ms);
-                        ms.Seek(0, SeekOrigin.Begin);
-
-                        bi.BeginInit();
-                        bi.CacheOption = BitmapCacheOption.OnLoad;
-                        bi.StreamSource = ms;
-                        bi.EndInit();
-                        ms.SetLength(0);
-                    }
-                }
-            }
-            bi.Freeze();
-
-            return ConvertToBgra32(bi);
-            */
         }
         async static private Task<BitmapSource> LoadImageAsync(FileInfo info)
         {

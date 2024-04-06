@@ -54,8 +54,11 @@
                         Command="{Binding OpenCommand}" />
             </WrapPanel>
         </StackPanel>
-        <StackPanel
+        <!-- <StackPanel
             SizeChanged="StackPanel_SizeChanged"
+            Background="Black"
+            AllowDrop="True"> -->
+        <StackPanel
             Background="Black"
             AllowDrop="True">
             <i:Interaction.Behaviors>
@@ -70,9 +73,15 @@
                 </i:EventTrigger>
             </i:Interaction.Triggers>
             <Canvas>
+                <!-- <Image  Name="Image1"
+                        RenderOptions.BitmapScalingMode="NearestNeighbor"
+                        Stretch="Uniform"
+                        Source="{Binding PictureView.Value}"> -->
                 <Image  Name="Image1"
                         RenderOptions.BitmapScalingMode="NearestNeighbor"
                         Stretch="Uniform"
+                        Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType=StackPanel}}"
+                        Height="{Binding ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorType=StackPanel}}"
                         Source="{Binding PictureView.Value}">
                     <i:Interaction.Triggers>
                         <i:EventTrigger EventName="MouseDown">
